@@ -106,6 +106,10 @@ m.connect('/timeseries/data',
           action='TimeseriesData')
 
 # Control to these handlers is controlled by the app.yaml acl lists.
+m.connect('/admin/archive/cron',
+          controller='archive:Archive',
+          action='ArchiveCron')
+
 m.connect('/admin/archive/gs',
           controller='archive:Archive',
           action='ArchiveToGoogleStorage')

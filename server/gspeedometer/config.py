@@ -65,5 +65,5 @@ ACTIVE_DAYS = 5
 #Archive Settings
 ARCHIVE_CONTENT_TYPE = 'application/zip'
 ARCHIVE_CONTENT_DISPOSITION_BASE = 'attachment; filename="%s.zip"'
-ARCHIVE_GS_BUCKET = 'gavaletz_mobiperf'
+ARCHIVE_GS_BUCKET = 'openmobiledata'
 ARCHIVE_GS_ACL = 'project-private'
