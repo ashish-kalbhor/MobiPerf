@@ -84,27 +84,27 @@ def GetMeasurementDictList(device_id, start=None, end=None):
 
 
 def ParametersToFileNameBase(device_id=None, start_time=None, end_time=None):
-    """Builds a file name base based on query parameters.
+  """Builds a file name base based on query parameters.
 
-    This method builds a file name base (laking an extension, timestamp or
-    other things that may be useful to add) that describes the contents of the
-    file of directory of files.
+  This method builds a file name base (laking an extension, timestamp or
+  other things that may be useful to add) that describes the contents of the
+  file of directory of files.
 
-    Args:
-      device_id: A string key for a device in the datastore.
-      start_time: A string with the timestamp for the earliest measurement
-          (microseconds UTC)
-      end_time: A string with the timestamp for the latest measurement
-          (microseconds UTC)
+  Args:
+    device_id: A string key for a device in the datastore.
+    start_time: A string with the timestamp for the earliest measurement
+        (microseconds UTC)
+    end_time: A string with the timestamp for the latest measurement
+        (microseconds UTC)
 
-    Returns:
-      A name that is suitable for describing the contents of the file based on
-          the parameters for the request.
+  Returns:
+    A name that is suitable for describing the contents of the file based on
+        the parameters for the request.
 
-    Raises:
-       No exceptions handled here.
-       No new exceptions generated here.
-    """
+  Raises:
+     No exceptions handled here.
+     No new exceptions generated here.
+  """
   archive_dir = ''
   if start_time:
     archive_dir += 'S-%s' % start_time
@@ -268,3 +268,54 @@ class Archive(webapp.RequestHandler):
     #TODO(gavaletz) create a datastore entry for the archive params, md5, etc.
     # location might be a gs bucket, someone who downloaded it etc.
     # with this data we do not have to do things twice.
+
+  def ArchiveCron(self, **unused_args):
+    """Posts data in compressed JSON format to Google Storage for Developers.
+    
+    Allows a file containing the requested data to be stored in Google Storage
+    for developers for later download.  Please see _Archive for details on
+    how arguments are handled and data is packaged.
+
+    In preparation for use of this method it is important that the bucket and
+    account that will be used be properly prepared by following these
+    instructions (http://goo.gl/S0LRl) paying careful attention to the ACLs.
+    This information should be used to adjust the pertinent parts of this
+    application's config file.
+
+    Raises:
+       DeadlineExceededError: Handled in the case where a request exceeds the
+          response time limit.  A error is displayed in the VERY short time for
+          reporting errors.
+       No new exceptions generated here.
+    """
+    try:
+
+      d0 = datetime.today() - datetime.timedelta(days=1)
+      start = datetime.datetime(d0.year, d0.month, d0.day, 0, 0)
+      end = datetime.datetime(d0.year, d0.month, d0.day, 23, 59, 59, 999999)
+
+      archive_dir, archive_data = self._Archive()
+
+      # Create the file
+      gs_archive_name = '/gs/%s/%s.zip' % (config.GS_BUCKET, archive_dir)
+      gs_archive = files.gs.create(gs_archive_name,
+          mime_type=config.CONTENT_TYPE, acl=config.GS_ACL,
+          content_disposition=config.CONTENT_DISPOSITION_BASE % archive_dir)
+
+      # Open the file and write the data.
+      with files.open(gs_archive, 'a') as f:
+        f.write(archive_data)
+
+      # Finalize (a special close) the file.
+      files.finalize(gs_archive)
+      self.response.headers['Content-Type'] = 'application/json'
+      self.response.out.write('{\'status\':200,  \'archive_name\':\'%s\'}' %
+          gs_archive_name)
+    except DeadlineExceededError, e:
+      logging.exception(e)
+      self.response.clear()
+      self.response.set_status(500)
+      #NOTE: if you see this error make sure it is run on a backend instance.
+      self.response.headers['Content-Type'] = 'application/json'
+      self.response.out.write(('{\'status\':500,  \'error_name\':\'%s\', '
+          '\'error_value\':\'%s\'}' % ('DeadlineExceededError', e)))
