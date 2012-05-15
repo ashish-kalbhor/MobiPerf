@@ -45,8 +45,6 @@ from gspeedometer.controllers import home
 from gspeedometer.controllers import measurement
 from gspeedometer.controllers import schedule
 from gspeedometer.controllers import timeseries
-from gspeedometer.controllers import validation
-from gspeedometer.controllers import validation_timeseries
 
 import routes
 
@@ -107,7 +105,6 @@ m.connect('/timeseries/data',
           controller='timeseries:Timeseries',
           action='TimeseriesData')
 
-
 m.connect('/validation/data',
           controller='validation:Validation',
           action='Validate')
@@ -129,6 +126,10 @@ m.connect('/validation/timeseries/data',
           action='TimeseriesData')
 
 # Control to these handlers is controlled by the app.yaml acl lists.
+m.connect('/admin/archive/cron',
+          controller='archive:Archive',
+          action='ArchiveCron')
+
 m.connect('/admin/archive/gs',
           controller='archive:Archive',
           action='ArchiveToGoogleStorage')
@@ -136,7 +137,6 @@ m.connect('/admin/archive/gs',
 m.connect('/admin/archive/file',
           controller='archive:Archive',
           action='ArchiveToFile')
-
 
 application = wsgi.WSGIApplication(m, debug=True)
 
